@@ -1,0 +1,27 @@
+Partie Serveur
+
+	1 socket de connexion. 
+	2 socket de communication.
+
+	-> Connexion 2 client
+	-> Reception PARTIE : premier Blanc, deuxieme Noir
+
+	Debut Partie
+
+		Boucle de jeu
+
+			-> Reception coup Blanc (COUP) , Verif( .o ) , Reponses (COUPREP) , timeout?  
+			-> Reception coup Noir (COUP)  , Verif( .o ) , Reponses (COUPREP), timeout?
+			
+		Fin Boucle
+
+	Fin Partie
+	
+Fin Serveur
+
+ 
+Gestion des connections une à une 
+Gestion des requetes clients une à une 
+
+
+-> Detection de l'activité sur la sockets dans la boucle du timeout (recv non bloquant).
