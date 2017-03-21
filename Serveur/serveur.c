@@ -127,10 +127,8 @@ int main(int argc, char** argv) {
 				return -1;
 			}
 
-			if (reqJ1.idRequest == PARTIE) {
-				//nomJ1 = reqJ1.nomJoueur;
-			}
-			else {
+			if (reqJ1.idRequest != PARTIE) {
+				
 				perror("serveurTCP: erreur dans la reception");
 				// envoie erreur aux joueur
 				TPartieRep rep;
@@ -160,10 +158,8 @@ int main(int argc, char** argv) {
 				return -1;
 			}
 
-			if (reqJ2.idRequest == PARTIE) {
-				//nomJ2 = reqJ2.nomJoueur;
-			}
-			else {
+			if (reqJ2.idRequest != PARTIE) {
+
 				perror("serveurTCP: erreur dans la reception");
 				// envoie erreur aux joueur
 				TPartieRep rep;
