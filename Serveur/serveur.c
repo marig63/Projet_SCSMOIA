@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdbool.h>
+#include <sys/time.h>
 
 #include "fonctionsTCP.h"
 #include "protocolColonne.h"
@@ -14,6 +15,7 @@
 /* taille du buffer de reception */
 #define TAIL_BUF 500
 #define MAX_CL 1020
+#define TIME_MAX 6;
 /*
 void lireOperation(Operation *op,TResultat *result){
 switch(op->operateur){
@@ -50,6 +52,8 @@ int main(int argc, char** argv) {
 
 	struct sockaddr_in nomTransmis;	/* adresse socket de transmission */
 	struct sockaddr_in nomConnecte;	/* adresse de la socket connectee */
+
+	struct timeval tv = { 0, 0 } // Parametre Timeout du select
 	
 	char nomJ1[TNOM];
 	char nomJ2[TNOM];
@@ -81,36 +85,41 @@ int main(int argc, char** argv) {
 
 	// Reception des demandes de connexion
 
-	err = accept(err,
-		(struct sockaddr *)&nomTransmis,
-		(socklen_t *)&sizeAddr);
-	if (err < 0) {
-		perror("serveurTCP:  erreur sur accept");
-		return -5;
-	}
-
-	sockJ1 = err;
-
-	err = accept(err,
-		(struct sockaddr *)&nomTransmis,
-		(socklen_t *)&sizeAddr);
-	if (err < 0) {
-		perror("serveurTCP:  erreur sur accept");
-		return -5;
-	}
-
-	sockJ2 = err;
-
 	fd_set readSet;
 	FD_ZERO(&readSet);
-	FD_SET(sockJ1, &readSet);
-	FD_SET(sockJ2, &readSet);
+	FD_SET(sockConx, &readSet);
+	nfsd = FD_SETSIZE + 1;
 
-	err = select(nfsd, &readSet, NULL, NULL, NULL);
-
-	// Reception des demande de partie
 	int demande = 0;
-	while (demande == 0) {
+	int num = 0;
+	while (demande == 0) { // Boucle de demande de partie (connexion + demande) -> Premier arriver = premier servie
+
+		err = select(nfsd, &readSet, NULL, NULL, NULL);
+
+		if (FD_ISSET(sockConx, &readSet) && num<2) { // On accepte que deux accept
+			err = accept(sockConx,
+				(struct sockaddr *)&nomTransmis,
+				(socklen_t *)&sizeAddr);
+			if (err < 0) {
+				perror("serveurTCP:  erreur sur accept");
+				return -5;
+			}
+
+			num++; // Increment du nbr d'accept
+
+			if (num == 1) {
+				sockJ1 = err;
+				FD_SET(sockJ1, &readSet);
+				nfsd = FD_SETSIZE + 1;
+			}
+			if (num == 2) {
+				sockJ2 = err;
+				FD_SET(sockJ2, &readSet);
+				nfsd = FD_SETSIZE + 1;
+			}
+		}
+
+		// Reception des demande de partie
 		if (FD_ISSET(sockJ1, &readSet)) {
 			/* Reception de la demande du j1 */
 			
@@ -175,6 +184,8 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	// Envoie des couleurs aux joueurs
+
 	if (demande == 1) {
 		TPartieRep repJ1;
 		repJ1.err = ERR_OK;
@@ -204,8 +215,13 @@ int main(int argc, char** argv) {
 
 	// Debut de la partie
 
+	
+
 	int nbCoup = 0;
 	while (nbCoup < 40) {
+
+		// init select avec timeout dans un timeval.
+		err = select(nfsd, &readSet, NULL, NULL, &tv);
 
 		if (FD_ISSET(sockJ1, &readSet)) {
 			/* Reception de coup pour le j1 */
@@ -234,10 +250,13 @@ int main(int argc, char** argv) {
 			// Reponse
 			TCoupRep rep;
 			rep.err = ERR_OK;
-			// VALID ...
-			if (res) { rep.validCoup = VALID; }
-
-			rep.validCoup = VALID;
+			// Test TIMEOUT , VALIDITER
+			if (tv.tv_sec > TIME_MAX) { rep.validCoup == TIMEOUT;
+			
+			// Traitement du timeout
+			}
+			if (res) { rep.validCoup == VALID; }
+			if (!res) { rep.validCoup == TRICHE; }
 			rep.propCoup = propCoup;
 			send(sockJ1, &rep, sizeof(TCoupRep), 0);
 
@@ -270,8 +289,14 @@ int main(int argc, char** argv) {
 			// Reponse
 			TCoupRep rep;
 			rep.err = ERR_OK;
-			// VALID ...
-			if(res){ rep.validCoup = VALID; }
+			// Test TIMEOUT , VALIDITER
+			if (tv.tv_sec > TIME_MAX) {
+				rep.validCoup == TIMEOUT;
+
+				// Traitement du timeout
+			}
+			if (res) { rep.validCoup == VALID; }
+			if (!res) { rep.validCoup == TRICHE; }
 			
 			rep.propCoup = propCoup;
 			send(sockJ2, &rep, sizeof(TCoupRep), 0);
