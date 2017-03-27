@@ -15,7 +15,7 @@
 /* taille du buffer de reception */
 #define TAIL_BUF 500
 #define MAX_CL 1020
-#define TIME_MAX 6;
+#define TIME_MAX 6
 /*
 void lireOperation(Operation *op,TResultat *result){
 switch(op->operateur){
@@ -38,6 +38,16 @@ break;
 }
 }*/
 
+void transformeNom(char *p, char *np) {
+	int i = 0;
+	for (i = 0; i < TNOM; i++) {
+		np = p;
+		p++;
+		np++;
+	}
+
+}
+
 int main(int argc, char** argv) {
 	int  sockConx,        /* descripteur socket connexion */
 		sockTrans,       /* descripteur socket transmission */
@@ -53,7 +63,7 @@ int main(int argc, char** argv) {
 	struct sockaddr_in nomTransmis;	/* adresse socket de transmission */
 	struct sockaddr_in nomConnecte;	/* adresse de la socket connectee */
 
-	struct timeval tv = { 0, 0 } // Parametre Timeout du select
+	struct timeval tv = { 0, 0 }; // Parametre Timeout du select
 	
 	char nomJ1[TNOM];
 	char nomJ2[TNOM];
@@ -190,26 +200,30 @@ int main(int argc, char** argv) {
 		TPartieRep repJ1;
 		repJ1.err = ERR_OK;
 		repJ1.coul = BLANC;
-		repJ1.nomAdvers = reqJ2.nomJoueur; //TODO
+		transformeNom(reqJ2.nomJoueur, repJ1.nomAdvers);
+		//repJ1.nomAdvers = reqJ2.nomJoueur; 
 		send(sockJ1, &repJ1, sizeof(TPartieRep), 0);
 
 		TPartieRep repJ2;
 		repJ2.err = ERR_OK;
 		repJ2.coul = NOIR;
-		repJ2.nomAdvers = reqJ1.nomJoueur; //TODO
+		transformeNom(reqJ1.nomJoueur, repJ2.nomAdvers);
+		//repJ2.nomAdvers = reqJ1.nomJoueur; 
 		send(sockJ2, &repJ2, sizeof(TPartieRep), 0);
 	}
 	if (demande == 2) {
 		TPartieRep repJ1;
 		repJ1.err = ERR_OK;
 		repJ1.coul = NOIR;
-		repJ1.nomAdvers = nomJ2; // TODO
+		transformeNom(reqJ2.nomJoueur, repJ1.nomAdvers);
+		//repJ1.nomAdvers = reqJ2.nomJoueur; 
 		send(sockJ1, &repJ1, sizeof(TPartieRep), 0);
 
 		TPartieRep repJ2;
 		repJ2.err = ERR_OK;
 		repJ2.coul = BLANC;
-		repJ2.nomAdvers = nomJ1; // TOOD
+		transformeNom(reqJ1.nomJoueur, repJ2.nomAdvers);
+		//repJ2.nomAdvers = reqJ1.nomJoueur; 
 		send(sockJ2, &repJ2, sizeof(TPartieRep), 0);
 	}
 
