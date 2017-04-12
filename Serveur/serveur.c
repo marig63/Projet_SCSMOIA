@@ -28,6 +28,84 @@ void transformeNom(char *p, char *np) {
 
 }
 
+
+int traitementDemandeConnex(int sockConx){
+	int err = accept(sockConx,NULL,NULL);
+    if (err < 0) {
+        perror("serveurTCP:  erreur sur accept");
+        return -5;
+    }
+			
+	return err;
+}
+
+int traitementDemandePartie(int sockJ1,int sockJ2,TPartieReq reqJ1){
+	//Reception de la demande du j1 /
+    int err = recv(sockJ1,&reqJ1,sizeof(TPartieReq), 0);
+    if (err < 0) {
+        perror("serveurTCP: erreur dans la reception");
+        // envoie erreur aux joueur
+        TPartieRep rep;
+        rep.err = ERR_PARTIE;
+        send(sockJ1, &rep, sizeof(TPartieRep), 0);
+        send(sockJ2, &rep, sizeof(TPartieRep), 0);
+        shutdown(sockJ1, 2); close(sockJ1);
+        shutdown(sockJ2, 2); close(sockJ2);
+        return -1;
+    }
+
+    if (reqJ1.idRequest != PARTIE) {
+                
+        perror("serveurTCP: erreur dans la reception");
+        // envoie erreur aux joueur
+        TPartieRep rep;
+        rep.err = ERR_TYP;
+        send(sockJ1, &rep, sizeof(TPartieRep), 0);
+        send(sockJ2, &rep, sizeof(TPartieRep), 0);
+        shutdown(sockJ1, 2); close(sockJ1);
+        shutdown(sockJ2, 2); close(sockJ2);
+        return -1;
+    }
+	
+	return 0;
+}
+
+void envoiCouleur(int sockJ1,int sockJ2,int demande,TPartieReq* reqJ1, TPartieReq* reqJ2){
+	// Envoie des couleurs aux joueurs
+
+    if (demande == 1) {
+        TPartieRep repJ1;
+        repJ1.err = ERR_OK;
+        repJ1.coul = BLANC;
+        transformeNom(reqJ2->nomJoueur, repJ1.nomAdvers);
+        //repJ1.nomAdvers = reqJ2.nomJoueur; 
+        send(sockJ1, &repJ1, sizeof(TPartieRep), 0);
+
+        TPartieRep repJ2;
+        repJ2.err = ERR_OK;
+        repJ2.coul = NOIR;
+        transformeNom(reqJ1->nomJoueur, repJ2.nomAdvers);
+        //repJ2.nomAdvers = reqJ1.nomJoueur; 
+        send(sockJ2, &repJ2, sizeof(TPartieRep), 0);
+    }
+    if (demande == 2) {
+        TPartieRep repJ1;
+        repJ1.err = ERR_OK;
+        repJ1.coul = NOIR;
+        transformeNom(reqJ2->nomJoueur, repJ1.nomAdvers);
+        //repJ1.nomAdvers = reqJ2.nomJoueur; 
+        send(sockJ1, &repJ1, sizeof(TPartieRep), 0);
+
+        TPartieRep repJ2;
+        repJ2.err = ERR_OK;
+        repJ2.coul = BLANC;
+        transformeNom(reqJ1->nomJoueur, repJ2.nomAdvers);
+        //repJ2.nomAdvers = reqJ1.nomJoueur; 
+        send(sockJ2, &repJ2, sizeof(TPartieRep), 0);
+    }
+	
+}
+
 int main(int argc, char** argv) {
     int  sockConx,        /* descripteur socket connexion */
         sockTrans,       /* descripteur socket transmission */
@@ -91,41 +169,21 @@ int main(int argc, char** argv) {
 	printf("\n");
 	printf("Attente des demande de connexions\n");
 	printf("\n");
-    while (num != 2) { // Boucle de demande de partie (connexion + demande) -> Premier arriver = premier servie
-
-        //err = select(nfsd, &readSet, NULL, NULL, NULL);
-		//printf("%d \n",err);
+	
+    while (num != 2) { // Boucle de connecion
 
         if (FD_ISSET(sockConx, &readSet) && num<2) { // On accepte que deux accept
-            err = accept(sockConx,
-                NULL,NULL);
-            if (err < 0) {
-                perror("serveurTCP:  erreur sur accept");
-                return -5;
-            }
-
-            num++; // Increment du nbr d'accept
-            if (num == 1) {
-                sockJ1 = err;
-                /*FD_SET(sockJ1, &readSet);
-                err = select(FD_SETSIZE, &readSet, NULL, NULL, NULL);
-				if (err < 0) {
-					perror("serveurTCP:  erreur sur select");
-					return -5;
-				}*/
-                
+		
+            
+			num++; // Increment du nbr d'accept
+			if (num == 1) {
+				sockJ1 = traitementDemandeConnex(sockConx);
 				printf("J1 Connecté %d\n",sockJ1);
-            }
-            if (num == 2) {
-                sockJ2 = err;
-                /*FD_SET(sockJ2, &readSet);
-				err = select(FD_SETSIZE, &readSet, NULL, NULL, NULL);
-				if (err < 0) {
-					perror("serveurTCP:  erreur sur select");
-					return -5;
-				}*/
+			}
+			if (num == 2) {
+				sockJ2 = traitementDemandeConnex(sockConx);
 				printf("J2 Connecté %d\n",sockJ2);
-            }
+			}
         }
 	}
 	
@@ -142,37 +200,14 @@ int main(int argc, char** argv) {
 	printf("Attente des demande de partie\n");
 	printf("\n");
 	
-	while(cpt<2){
+	while(cpt<2){ // Boucle de demande des parties
 		
 		
         // Reception des demande de partie
         if(FD_ISSET(sockJ1, &readSet)){
             //Reception de la demande du j1 /
-            err = recv(sockJ1,&reqJ1,sizeof(TPartieReq), 0);
-            if (err < 0) {
-                perror("serveurTCP: erreur dans la reception sockJ1");
-                // envoie erreur aux joueur
-                TPartieRep rep;
-                rep.err = ERR_PARTIE;
-                send(sockJ1, &rep, sizeof(TPartieRep), 0);
-                send(sockJ2, &rep, sizeof(TPartieRep), 0);
-                shutdown(sockJ1, 2); close(sockJ1);
-                shutdown(sockJ2, 2); close(sockJ2);
-                return -1;
-            }
-
-            if (reqJ1.idRequest != PARTIE) {
-                
-                perror("serveurTCP: erreur dans la reception sockJ1");
-                // envoie erreur aux joueur
-                TPartieRep rep;
-                rep.err = ERR_TYP;
-                send(sockJ1, &rep, sizeof(TPartieRep), 0);
-                send(sockJ2, &rep, sizeof(TPartieRep), 0);
-                shutdown(sockJ1, 2); close(sockJ1);
-                shutdown(sockJ2, 2); close(sockJ2);
-                return -1;
-            }
+            
+			traitementDemandePartie(sockJ1,sockJ2,reqJ1);
 			cpt++;
             demande = 1;
 			printf("J1 partie demandee\n");
@@ -180,31 +215,8 @@ int main(int argc, char** argv) {
 		
         if (FD_ISSET(sockJ2, &readSet)) {
             // Reception de la demande du j2 /
-            err = recv(sockJ2,&reqJ2,sizeof(TPartieReq), 0);
-            if (err < 0) {
-                perror("serveurTCP: erreur dans la reception sockJ2");
-                // envoie erreur aux joueur
-                TPartieRep rep;
-                rep.err = ERR_PARTIE;
-                send(sockJ1, &rep, sizeof(TPartieRep), 0);
-                send(sockJ2, &rep, sizeof(TPartieRep), 0);
-                shutdown(sockJ2, 2); close(sockJ2);
-                shutdown(sockJ1, 2); close(sockJ1);
-                return -1;
-            }
-
-            if (reqJ2.idRequest != PARTIE) {
-
-                perror("serveurTCP: erreur dans la reception sockJ2");
-                // envoie erreur aux joueur
-                TPartieRep rep;
-                rep.err = ERR_TYP;
-                send(sockJ1, &rep, sizeof(TPartieRep), 0);
-                send(sockJ2, &rep, sizeof(TPartieRep), 0);
-                shutdown(sockJ1, 2); close(sockJ1);
-                shutdown(sockJ2, 2); close(sockJ2);
-                return -1;
-            }
+            
+			traitementDemandePartie(sockJ2,sockJ1,reqJ2);
 			cpt++;
             demande = 2;
 			printf("J2 partie demandee\n");
@@ -215,36 +227,7 @@ int main(int argc, char** argv) {
 
     // Envoie des couleurs aux joueurs
 
-    if (demande == 1) {
-        TPartieRep repJ1;
-        repJ1.err = ERR_OK;
-        repJ1.coul = BLANC;
-        transformeNom(reqJ2.nomJoueur, repJ1.nomAdvers);
-        //repJ1.nomAdvers = reqJ2.nomJoueur; 
-        send(sockJ1, &repJ1, sizeof(TPartieRep), 0);
-
-        TPartieRep repJ2;
-        repJ2.err = ERR_OK;
-        repJ2.coul = NOIR;
-        transformeNom(reqJ1.nomJoueur, repJ2.nomAdvers);
-        //repJ2.nomAdvers = reqJ1.nomJoueur; 
-        send(sockJ2, &repJ2, sizeof(TPartieRep), 0);
-    }
-    if (demande == 2) {
-        TPartieRep repJ1;
-        repJ1.err = ERR_OK;
-        repJ1.coul = NOIR;
-        transformeNom(reqJ2.nomJoueur, repJ1.nomAdvers);
-        //repJ1.nomAdvers = reqJ2.nomJoueur; 
-        send(sockJ1, &repJ1, sizeof(TPartieRep), 0);
-
-        TPartieRep repJ2;
-        repJ2.err = ERR_OK;
-        repJ2.coul = BLANC;
-        transformeNom(reqJ1.nomJoueur, repJ2.nomAdvers);
-        //repJ2.nomAdvers = reqJ1.nomJoueur; 
-        send(sockJ2, &repJ2, sizeof(TPartieRep), 0);
-    }
+    envoiCouleur(sockJ1,sockJ2,demande,&reqJ1,&reqJ2);
 
     // Debut de la partie
 
