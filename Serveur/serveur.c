@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
 
     int scl[MAX_CL];
     int nbsc = 0;
-    int nfsd = FD_SETSIZE + 1;
+    int nfsd = 3;
 
     /*
     * verification des arguments
@@ -156,11 +156,11 @@ int main(int argc, char** argv) {
     fd_set readSet;
     FD_ZERO(&readSet);
     FD_SET(sockConx, &readSet);
-    //nfsd = FD_SETSIZE;
+    nfsd ++;
 	int cpt = 0;
     int demande = 0;
     int num = 0;
-	err = select(FD_SETSIZE, &readSet, NULL, NULL, NULL);
+	err = select(nfsd, &readSet, NULL, NULL, NULL);
 	if (err < 0) {
                 perror("serveurTCP:  erreur sur select");
                 return -5;
@@ -178,10 +178,12 @@ int main(int argc, char** argv) {
 			num++; // Increment du nbr d'accept
 			if (num == 1) {
 				sockJ1 = traitementDemandeConnex(sockConx);
+				nfsd++;
 				printf("J1 Connecté %d\n",sockJ1);
 			}
 			if (num == 2) {
 				sockJ2 = traitementDemandeConnex(sockConx);
+				nfsd++;
 				printf("J2 Connecté %d\n",sockJ2);
 			}
         }
@@ -189,7 +191,7 @@ int main(int argc, char** argv) {
 	
 	FD_SET(sockJ1, &readSet);
 	FD_SET(sockJ2, &readSet);
-	err = select(FD_SETSIZE, &readSet, NULL, NULL, NULL);
+	err = select(nfsd, &readSet, NULL, NULL, NULL);
 	if (err < 0) {
 		perror("serveurTCP:  erreur sur select");
 		return -5;
@@ -228,6 +230,12 @@ int main(int argc, char** argv) {
     // Envoie des couleurs aux joueurs
 
     envoiCouleur(sockJ1,sockJ2,demande,&reqJ1,&reqJ2);
+	if(demande == 2){
+		printf("demande = %d",demande);
+		int tmp = sockJ1;
+		sockJ1 = sockJ2;
+		sockJ2 = tmp;
+	}
 
     // Debut de la partie
 
@@ -238,6 +246,7 @@ int main(int argc, char** argv) {
     
 	struct timeval tv = { 6, 0 }; // Parametre Timeout du select
 	
+	
     int nbCoup = 0;
     while (nbCoup < 40) {
 
@@ -246,17 +255,25 @@ int main(int argc, char** argv) {
         // Si TIMEOUT -> recup quand meme les infos de connex mais on renvoi TIMEOUT ( il a perdu ).
 		tv.tv_sec = 6;
 		tv.tv_usec = 0;
-        err = select(FD_SETSIZE, &readSet, NULL, NULL, &tv);
+		
+		FD_SET(sockJ1, &readSet);
+		FD_SET(sockJ2, &readSet);
+		err = select(nfsd, &readSet, NULL, NULL, &tv);
 		if (err < 0) {
 			perror("serveurTCP:  erreur sur select");
 			return -5;
 		}
+		
 
         if (FD_ISSET(sockJ1, &readSet)) {
-            // Reception de coup pour le j1 
+            // Reception de coup 
+			printf(" Activité SockJ1 \n");
+			
             TCoupReq reqJ1;
 
-            err = recv(sockJ1,&reqJ1,sizeof(TPartieReq), 0);
+            err = recv(sockJ1,&reqJ1,sizeof(TCoupReq), 0);
+			printf("\t Coup Joueur 1 reçu \n");
+			
             if (err < 0) {
               perror("serveurTCP: erreur dans la reception");
               TPartieRep rep;
@@ -280,24 +297,23 @@ int main(int argc, char** argv) {
             TCoupRep rep;
             rep.err = ERR_OK;
             // Test TIMEOUT , VALIDITER
-            if (tv.tv_sec > TIME_MAX) { rep.validCoup == TIMEOUT;
-            // Traitement du timeout
-            }
             if (res) { rep.validCoup == VALID; }
             if (!res) { rep.validCoup == TRICHE; }
             rep.propCoup = propCoup;
             send(sockJ1, &rep, sizeof(TCoupRep), 0);
-
             send(sockJ2, &rep, sizeof(TCoupRep), 0);
             send(sockJ2, &reqJ1, sizeof(TCoupReq), 0);    
 
             nbCoup++;
         }
-        if (FD_ISSET(sockJ1, &readSet)) {
+        if (FD_ISSET(sockJ2, &readSet)) {
             // Reception de coup pour le j2 
+			printf(" Activité SockJ2 \n");
+			
             TCoupReq reqJ2;
 
-            err = recv(sockJ2,&reqJ2, sizeof(TPartieReq), 0);
+            err = recv(sockJ2,&reqJ2, sizeof(TCoupReq), 0);
+			printf("\t Coup Joueur 2 reçu \n");
             if (err < 0) {
                 perror("serveurTCP: erreur dans la reception");
                 TPartieRep rep;
@@ -320,12 +336,7 @@ int main(int argc, char** argv) {
             // Reponse
             TCoupRep rep;
             rep.err = ERR_OK;
-            // Test TIMEOUT , VALIDITER
-            if (tv.tv_sec > TIME_MAX) {
-                rep.validCoup == TIMEOUT;
-
-                // Traitement du timeout
-            }
+           
             if (res) { rep.validCoup == VALID; }
             if (!res) { rep.validCoup == TRICHE; }
             
