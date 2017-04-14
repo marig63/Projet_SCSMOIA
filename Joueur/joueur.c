@@ -74,6 +74,23 @@ void creationCoup(TCoupReq* coup,int couleur){
 	coup->action.posPion = cases;
 }
 
+void affichageMessFin(TCoupRep repCoup){
+	//affichage du resultat de la partie
+	switch(repCoup.propCoup){
+		case GAGNE:
+			printf("Vous avez gagné\n");
+		break;
+
+		case PERDU:
+			printf("Vous avez perdu\n");
+		break;
+
+		case NULLE:
+			printf("Match nulle\n");
+		break;
+	}
+}
+
 int main(int argc, char **argv) {
 
   int sock,                /* descripteur de la socket locale */
@@ -87,7 +104,8 @@ int main(int argc, char **argv) {
 	TCoupReq coup;
 	TCoupReq coupAdverse;
 	TCoupRep repCoup;
-	int continu =0;
+	TCoupRep repCoupAdverse;
+	int continu = 0;
 	
 	/* verification des arguments */
   if (argc != 4) {
@@ -128,7 +146,7 @@ int main(int argc, char **argv) {
 		t++;
 	}
 
-	while(nbPartie < 2){
+
 	/*----------------*/
 
 	//envoie demande partie
@@ -160,22 +178,23 @@ int main(int argc, char **argv) {
 
 	//envoie coup
 	//demande coup a l'IA
+	while(nbPartie < 2){
 
-	if(couleurPion == 2 && nbPartie == 0){
+	if((couleurPion == 2 && nbPartie == 0) || (couleurPion == 1 && nbPartie == 1)){
 
 		//reception de la validation du coup adverse
-		err = recv(sock,&repCoup,sizeof(TCoupRep),0);
+		err = recv(sock,&repCoupAdverse,sizeof(TCoupRep),0);
 		if(err <= 0){
 			printf("Erreur reception validation du coup adverse 1\n");
 			exit(5);
 		}
 
-		if(repCoup.err == ERR_OK && repCoup.propCoup == CONT){
+		if(repCoupAdverse.err == ERR_OK && repCoupAdverse.propCoup == CONT){
 			//reception du coup
 			err = recv(sock,&coupAdverse,sizeof(TCoupReq),0);
 
 			if(err <= 0){
-				printf("Erreur lors de la reception du coup adverse\n");
+				printf("Erreur lors de la reception du coup adverse 2 \n");
 				exit(6);
 			}
 			gestionCoupAdverse(coupAdverse);
@@ -184,7 +203,7 @@ int main(int argc, char **argv) {
 	}
 
 	if(continu == 1 || couleurPion == 1 || nbPartie == 1){
-	printf("voila\n");
+
 	do{
 
 		//envoie du prochain coup
@@ -198,7 +217,7 @@ int main(int argc, char **argv) {
 	//reception de la validation du coup
 	err = recv(sock,&repCoup,sizeof(TCoupRep),0);
 		if(err <= 0){
-			printf("Erreur reception validation de mon coup \n");
+			printf("Erreur reception validation de mon coup 3\n");
 			exit(8);
 		}
 
@@ -210,13 +229,13 @@ int main(int argc, char **argv) {
 	if(repCoup.propCoup == CONT){
 	//reception coup adverse
 		//reception de la validation du coup adverse
-		err = recv(sock,&repCoup,sizeof(TCoupRep),0);
+		err = recv(sock,&repCoupAdverse,sizeof(TCoupRep),0);
 		if(err <= 0){
 			printf("Erreur reception validation du coup adverse 2\n");
 			exit(9);
 		}
 
-		if(repCoup.err == ERR_OK && repCoup.propCoup == CONT){
+		if(repCoupAdverse.err == ERR_OK && repCoupAdverse.propCoup == CONT){
 			//reception du coup
 			err = recv(sock,&coupAdverse,sizeof(TCoupReq),0);
 
@@ -228,25 +247,21 @@ int main(int argc, char **argv) {
 			continu = 1;
 		}
 	}
-
-	}while(repCoup.propCoup == CONT);
+	}while(repCoupAdverse.propCoup == CONT && repCoup.propCoup == CONT);
 	nbPartie++;
 	}
 
-	//affichage du resultat de la partie
-	switch(repCoup.propCoup){
-		case GAGNE:
-			printf("Vous avez gagné\n");
-		break;
-
-		case PERDU:
-			printf("Vous avez perdu\n");
-		break;
-
-		case NULLE:
+	if(repCoup.propCoup == GAGNE){
+		printf("Vous avez gagné\n");
+	}else{
+		if(repCoup.propCoup == NULLE){
 			printf("Match nulle\n");
-		break;
+		}else{
+			printf("Vous avez perdu\n");
+		}
 	}
+
+	//affichageMessFin(repCoup);	
 
 	/*-----------------*/
 	}
