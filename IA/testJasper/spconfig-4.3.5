@@ -1,0 +1,130 @@
+# spld.config.in: processed by Utils/Makefile to produce spld.config
+
+DEF_PREFIX=C:/cygwin64/tmp/octopussy-vm-win-7-vc14-64-build-20161207-164646/srcdir/WixTemplateRoot
+SP_DIRNAME=sicstus-4.3.5
+
+# A run-time system foo.exe in directory DIR expects the sicstus
+# specific files to be found in sub directory DIR/SP_RTSYS_DIRNAME
+# Traditionally this was DIR/lib but on Win32 and MacOS X version
+# specific names are used. Changing this only makes sense on SysV
+# when spld --moveable is used.
+SP_RTSYS_DIRNAME=sp-4.3.5
+
+# Keep this list sorted.
+BDBLIB=C:/db-6.0.30-vs14-Release-x64/x64/Release/libdb60.lib
+BDB_PATH=/cygdrive/c/db-6.0.30-vs14-Release-x64
+CC=cl.exe
+CC_NOLIBPATH=
+CFLAGS= -nologo  /MD   /Z7 /GF /Ox   /MD 
+# [PM] 4.0.2+ always empty, can override with --conf EXTRA_CFLAGS="..."
+EXTRA_CFLAGS=
+CHARMAINOBJ=charmain.obj cmdproc.obj intrpt.obj 
+SPAUXOBJ=spaux.obj
+CHMOD=chmod
+CP=cp
+CYGPATH=cygpath -m
+DSMAINOBJ=main.obj
+ENABLE_STATLIB=yes
+EXEEXT=.exe
+HAVE_SYSV_ORIGIN=no
+FLI_FILE=fli_win.c
+EXPFILE_SYMBOL_PREFIX=
+IMPLIB=sprt4-3-5.lib
+INCR_CFLAGS=
+JAVAC=/cygdrive/c/PROGRA~1/Java/JDK17~1.0_5/bin/javac.exe
+JAVAEXEC=/cygdrive/c/PROGRA~1/Java/JDK17~1.0_5/bin/java.exe
+JAVAH=/cygdrive/c/PROGRA~1/Java/JDK17~1.0_5/bin/javah.exe
+JAVALIB=C:/PROGRA~1/Java/JDK17~1.0_5/lib/jvm.lib
+JAVA_CLASSPATH=
+JAVA_EXECOPTS= 
+JDK_PATH=C:/PROGRA~1/Java/JDK17~1.0_5
+JDK_RPATH=
+JASPER_MODULE=jasper.po
+TCL_LIBRARY=/cygdrive/c/ActiveTcl8.5.15.0.297577-win32-x86_64-threaded/lib/tcl8.5
+TK_LIBRARY=/cygdrive/c/ActiveTcl8.5.15.0.297577-win32-x86_64-threaded/lib/tk8.5
+TCLTK_MODULE=tcltk.po
+TCLTK_PATH=C:/ActiveTcl8.5.15.0.297577-win32-x86_64-threaded
+TCL_PATH=C:/ActiveTcl8.5.15.0.297577-win32-x86_64-threaded
+TK_PATH=C:/ActiveTcl8.5.15.0.297577-win32-x86_64-threaded
+LD=dummy_ld
+SPLD_EXE_LDFLAGS=-nologo 
+SPLD_EXE_LIBS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib Ws2_32.lib
+SPLD_EXE_EXTRA_RPATH=
+SPLD_JNI_LIBS=
+SPLFR_SHLD_LASTARG=-IMPLIB:dummy.lib
+SPLD_OPT_WRAPPER_DEFAULT=no
+SPLD_OPT_MOVEABLE_DEFAULT=no
+SPLD_OPT_MOVEABLE_NEEDS_WRAPPER=no
+SPLD_OPT_USE_LOCALE_DEFAULT=yes
+SPLD_OPT_LOCALE_NAME_DEFAULT=
+# SPRM 7579
+SPLD_OPT_MORE_MEMORY_NEEDS_LC_ALL_C=yes
+LD_R=
+CC_ROPT=
+SPLD_SHLD_JNILIB_FLAGS=
+SPLD_SHLD_ROPT=
+# [PM] 4.0 yes or no (Win32 embed VS 2005 manifest)
+SPLD_EMBED_MANIFEST=no
+# [PM] 4.0 yes or no (Win32 embed VS 2005 manifest)
+SPLFR_EMBED_MANIFEST=no
+SPLFR_SHLD_ROPT=
+# [PM] 4.0.2+
+SPLIT_OPT_CFLAG=1
+LD_LIBRARY_PATH_name=PATH
+LD_BUILDS_RPATH_FROM_L=no
+SPLFR_LD_r_FLAGS=
+LN=cp -Ruv
+M4=m4.exe
+MV=mv
+# [PM] 4.0 Visual Studio 8 Manifest Tool mt.exe
+MT=mt.exe
+NMEDIT=
+NOLINK_OPT=-c
+NOLINK_OUTPUT_OPT=-Fo
+SHLD_OUTPUT_OPT=-OUT:
+OBJEXT=obj
+OUTPUT_OPT=-Fe
+PATHSEP=;
+PERL=/usr/bin/perl.exe
+PLFLAGS=compactcode
+QUOTECHAR="
+RANLIB=ranlib
+RESGEN_TYPE=win32res
+RM=rm
+RTKERNEL_BASENAME_SANS_SUFFIX=sprt4-3-5
+RTKERNEL_BASENAME_WITH_DSO_SUFFIX=sprt4-3-5.dll
+RTKERNEL_BASENAME_WITH_STAT_SUFFIX=sprt4-3-5_static.lib
+SPLFR_SHLD=link.exe
+SPLFR_SHLDFLAGS=-nologo -dll /INCREMENTAL:NO /NXCOMPAT kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib Ws2_32.lib -debug
+# 3.9.1
+SPLFR_SHLD_EXPORT_ARG=
+SPLFR_LD_EXPORT_ARG=
+# 3.9.1
+SPLFR_SHLD_POST_PROCESS=
+SPLFR_SHLD_POST_PROCESS_EXPFILE_OPT=
+SPLFR_SHLD_POST_PROCESS_LIB_OPT=
+# 3.9.1
+SPLFR_LD_R_POST_PROCESS=
+SPLFR_LD_R_POST_PROCESS_EXPFILE_OPT=
+SPLFR_LD_R_POST_PROCESS_LIB_OPT=
+#
+SHSFX=dll
+FLI_SHSFX=dll
+# resource compiler used by spld to compile data resources on Win32
+RCEXE=rc
+SICSTUS_MAJOR_VERSION=4
+SICSTUS_MINOR_VERSION=3
+SICSTUS_REVISION_VERSION=5
+SICSTUS_BETA_VERSION=0
+SICSTUS_VERSION_STRING=4.3.5
+SOCKETLIB=wsock32.lib
+STSFX=lib
+SYSTEMLIB=
+TCLLIB=C:/ActiveTcl8.5.15.0.297577-win32-x86_64-threaded/lib/tcl85.lib C:/ActiveTcl8.5.15.0.297577-win32-x86_64-threaded/lib/tk85.lib  
+WIN32_EXTRAOBJS=win32.obj
+WIN32_SPLD_SHLD_SPECIAL=
+WIN32_SPLD_CC_SPECIAL=/link  /NXCOMPAT
+WIN32_EMBED_MANIFESTS=no
+WINMAINOBJ=winmain.obj cmdproc.obj intrpt.obj 
+VERBOSE_FLAG=
+NOVERBOSE_FLAG=-nologo
