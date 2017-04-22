@@ -133,6 +133,7 @@ bool traitementCoup(int sockJ1,int sockJ2,int coul){
 	TPropCoup propCoup;
 			
 	bool res;
+	printf("Joueuer : %d\n",coul);
 	res = validationCoup(coul,reqJ1,&propCoup);
 				
 	bool fini = false;
@@ -150,7 +151,7 @@ bool traitementCoup(int sockJ1,int sockJ2,int coul){
 	rep.propCoup = propCoup;
 	send(sockJ1, &rep, sizeof(TCoupRep), 0);
 	send(sockJ2, &rep, sizeof(TCoupRep), 0);
-	send(sockJ2, &reqJ1, sizeof(TCoupReq), 0);  
+	if(!fini){send(sockJ2, &reqJ1, sizeof(TCoupReq), 0);}  
 	
 	return fini;
 	
@@ -334,13 +335,14 @@ int main(int argc, char** argv) {
 
 			if (FD_ISSET(sockJ1, &readSet) && !fini) {
 				// Reception de coup 
-				  
+				printf("\t Coup J%d\n",coulJ1);  
 				fini = traitementCoup(sockJ1,sockJ2,coulJ1);
 
 				nbCoup++;
 			}
 			if (FD_ISSET(sockJ2, &readSet) && !fini) {
 				// Reception de coup pour le j2 
+				printf("\t Coup J%d\n",coulJ2);
 				fini = traitementCoup(sockJ2,sockJ1,coulJ2);
 
 				nbCoup++;
