@@ -10,26 +10,24 @@ public class Main {
         SPQuery query;
         int i;
 
-        try
-        {
-            sp = new SICStus(argv,null);
-            
-            sp.load("./test.pl");
+        try{
+        	//listeCoupPossible([[],[N,N,N],[],[N,N],[],[N,N],[],[],[N,N,N]],_,0,Res).
+        	//listeCoupPossible(Plateau,CouleurPion,NbPion,Res):-
+        	sp = new SICStus(argv,null);
 
-            SPPredicate pred = new SPPredicate(sp, "reinePLC", 5, "");
-            SPTerm a = new SPTerm(sp, 10);
-            SPTerm b = new SPTerm(sp, "R");
-            SPTerm x = new SPTerm(sp).putVariable();
-            SPTerm y = new SPTerm(sp).putVariable();
-            SPTerm z = new SPTerm(sp).putVariable();
+            sp.load("C:/Users/guillaume/workspace/testJasper/src/testJasper/test.pl");
 
-            query = sp.openQuery(pred, new SPTerm[] { a, b, x, y, z });
+            SPPredicate pred = new SPPredicate(sp, "listeCoupPossible", 4, "");
+            SPTerm plateau = new SPTerm(sp, "[[],[N,N,N],[],[N,N],[],[N,N],[],[],[N,N,N]]");
+            SPTerm couleurPion = new SPTerm(sp, "N");
+            SPTerm nbPion = new SPTerm(sp, 0);
+            SPTerm res = new SPTerm(sp).putVariable();
+
+            query = sp.openQuery(pred, new SPTerm[] { plateau, couleurPion, nbPion, res});
 
             while (query.nextSolution())
             {
-                System.out.println(x.toString());
-                System.out.println(y.toString());
-                System.out.println(z.toString());
+                System.out.println(res.toString());
             }
         }
         catch ( Exception e )
