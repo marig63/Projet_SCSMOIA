@@ -1,0 +1,5 @@
+[[],[],[],[],[],[],[],[],[]]
+
+listeCoupPossible([[],[N,N,N],[],[N,N],[],[N,N],[],[],[N,N,N]],_,0,Res).
+
+listeCoupPossible([[N],[N],[N],[N],[N],[N],[N],[N],[N]],N,8,Res).
