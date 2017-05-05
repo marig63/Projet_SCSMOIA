@@ -379,6 +379,7 @@ int main(int argc, char** argv) {
 				timeout = false;
 				nbCoup++;
 				if(pc.propCoup == GAGNE){scoreJ1++;}
+				if(pc.propCoup == PERDU){scoreJ2++;}
 			}
 			if (FD_ISSET(sockJ2, &readSet) && !fini) {
 				// Reception de coup pour le j2 
@@ -389,6 +390,7 @@ int main(int argc, char** argv) {
 				timeout = false;
 				nbCoup++;
 				if(pc.propCoup == GAGNE){scoreJ2++;}
+				if(pc.propCoup == PERDU){scoreJ1++;}
 			}
 			
 		}
