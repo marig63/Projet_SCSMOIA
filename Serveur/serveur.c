@@ -117,12 +117,10 @@ void envoiCouleur(int sockJ1,int sockJ2,int demande,TPartieReq* reqJ1, TPartieRe
  * param 	int sockJ2   		Socket de connexion du joueur qui attent le coup 
  * param 	int coul 			Couleur du joueur qui envoie le coup
  * param 	bool timeout		Indique si le joueur qui envoie le coup a mis trop de temps a depasser le temps autorisé
+ * param 	TPropCoup* pc		Parametre de sortie du resultat de la partie(utiliser pour calculer le score)
  * return 	bool 				Retourne vrai si la partie courrente est terminer
  */
-bool traitementCoup(int sockJ1,int sockJ2,int coul,bool timeout){
-	//printf(" Activité SockJ1 \n");
-	//printf(" Partie %d\n",nbPartie+1);
-				
+bool traitementCoup(int sockJ1,int sockJ2,int coul,bool timeout,TCoupRep* pc){
 	int err;
 	TCoupReq reqJ1;
 	TPropCoup propCoup;
@@ -156,16 +154,20 @@ bool traitementCoup(int sockJ1,int sockJ2,int coul,bool timeout){
 		res = validationCoup(coul,reqJ1,&propCoup);
 		printf("TIMEOUT : Le joueur %d n'a pas répondue à temps : Il a perdu la partie\n",coul);
 		rep.validCoup = TIMEOUT; rep.propCoup = PERDU; fini = true;
+		pc->propCoup = PERDU;
 	}
 	else{
 		res = validationCoup(coul,reqJ1,&propCoup);
+
 		if (res) { 
 			rep.validCoup = VALID; 
 			printf("Coup du Joueur %d Validé \n",coul);
 			if(propCoup == GAGNE){
+				pc->propCoup = GAGNE;
 				printf("Le Joueur %d à GAGNÉ \n",coul);
 			}
 			if(propCoup == NULLE){
+				pc->propCoup = NULLE;
 				printf("Il y a match nulle !\n");
 			}
 		}
@@ -173,7 +175,8 @@ bool traitementCoup(int sockJ1,int sockJ2,int coul,bool timeout){
 			rep.validCoup = TRICHE; 
 			printf("Coup du Joueur %d NON Validé \n",coul);
 			if(propCoup == PERDU){
-				printf("Le Joueur %d à GAGNÉ \n",coul);
+				pc->propCoup = PERDU;
+				printf("Le Joueur %d à PERDU \n",coul);
 			}
 		}
 	}
@@ -193,6 +196,27 @@ bool traitementCoup(int sockJ1,int sockJ2,int coul,bool timeout){
 	
 }
 
+/**
+ * Fonction qui affiche les scores des joueurs
+ * param 	int scoreJ1  		Score du joueur 1
+ * param 	int scoreJ2   		Score du joueur 2 
+ * param 	int demande  		Joueur ayant envoyer la demande en premier 
+ * param 	TPartieReq* reqJ1  	Requete de demande de partie envoyer par le joueur 1
+ * param 	TPartieReq* reqJ1  	Requete de demande de partie envoyer par le joueur 2
+ * return 	void
+ */
+void affichageScore(int scoreJ1,int scoreJ2,int demande,TPartieReq* reqJ1, TPartieReq* reqJ2){
+	if(demande == 1){
+		printf("Score joueur %s : %d partie(s) gagné\n",reqJ1->nomJoueur,scoreJ1);
+		printf("Score joueur %s : %d partie(s) gagné\n",reqJ2->nomJoueur,scoreJ2);
+	}
+	if(demande == 2){
+		printf("Score joueur %s : %d partie(s) gagné\n",reqJ1->nomJoueur,scoreJ2);
+		printf("Score joueur %s : %d partie(s) gagné\n",reqJ2->nomJoueur,scoreJ1);
+	}
+	
+}
+
 int main(int argc, char** argv) {
     int  sockConx,       /* descripteur socket connexion */
         sockJ1=0,		 /* descripteur socket transmission du premier connecté*/
@@ -200,9 +224,6 @@ int main(int argc, char** argv) {
         port,            /* numero de port */
         sizeAddr,        /* taille de l'adresse d'une socket */
         err;             /* code d'erreur */
- 
-    char nomJ1[TNOM]; 	 /* Nom Joueur 1 */
-    char nomJ2[TNOM]; 	 /* Nom Joueur 2 */
 
     TPartieReq reqJ1; 	 /* Requete de demande du joueur 1 */
     TPartieReq reqJ2; 	 /* Requete de demande du joueur 2 */
@@ -213,6 +234,8 @@ int main(int argc, char** argv) {
 	
 	int coulJ1 = 0;		 /* Couleur du joueur 1 */
 	int coulJ2 = 0;		 /* Couleur du joueur 2 */
+	int scoreJ1 = 0;	 /* Score du joueur 1 */
+	int scoreJ2 = 0;	 /* Score du joueur 2 */
     
     // Vérification des arguments ( Numero de port )
     if (argc != 2) {
@@ -349,17 +372,23 @@ int main(int argc, char** argv) {
 
 			if (FD_ISSET(sockJ1, &readSet) && !fini) {
 				// Reception de coup pour le j1
+				TCoupRep pc;
+				pc.propCoup = CONT;
 				printf("\t \t \t \tCoup J%d\n",coulJ1);  
-				fini = traitementCoup(sockJ1,sockJ2,coulJ1,timeout);
+				fini = traitementCoup(sockJ1,sockJ2,coulJ1,timeout,&pc);
 				timeout = false;
 				nbCoup++;
+				if(pc.propCoup == GAGNE){scoreJ1++;}
 			}
 			if (FD_ISSET(sockJ2, &readSet) && !fini) {
 				// Reception de coup pour le j2 
+				TCoupRep pc;
+				pc.propCoup = CONT;
 				printf("\t \t \t \tCoup J%d\n",coulJ2);
-				fini = traitementCoup(sockJ2,sockJ1,coulJ2,timeout);
+				fini = traitementCoup(sockJ2,sockJ1,coulJ2,timeout,&pc);
 				timeout = false;
 				nbCoup++;
+				if(pc.propCoup == GAGNE){scoreJ2++;}
 			}
 			
 		}
@@ -388,7 +417,7 @@ int main(int argc, char** argv) {
 		
 	}
 
-    
+    affichageScore(scoreJ1,scoreJ2,demande,&reqJ1,&reqJ2);
     // arret et fermeture
     shutdown(sockJ1, 2); close(sockJ1);
     shutdown(sockJ2, 2); close(sockJ2);
