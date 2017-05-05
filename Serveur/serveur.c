@@ -13,30 +13,14 @@
 #include "validation.h"
 
 /* taille du buffer de reception */
-#define TAIL_BUF 500
-#define MAX_CL 1020
 #define TIME_MAX 6
 
 
-void transformeNom(char* p, TPartieRep* rep) {
-    int i = 0;
-    //for (i = 0; i < TNOM; i++) {
-        //rep->nomAdvers = p;
-		//printf("%c\n",*p);
-        //p++;
-        //np++;
-    //}
-	/*
-	while(i< TNOM){
-		printf("%c\n",p[i]);
-		i++;
-		p++;
-	}*/
-	//rep->nomAdvers = p;
-
-}
-
-
+/**
+ * Fonction de traitement des demandes de connexion
+ * param 	int sockConx   	Socket de connexion du serveur
+ * return 	int 			Retourne la valeur du descripteur de fichier du joueur connectée
+ */
 int traitementDemandeConnex(int sockConx){
 	int err = accept(sockConx,NULL,NULL);
     if (err < 0) {
@@ -47,13 +31,20 @@ int traitementDemandeConnex(int sockConx){
 	return err;
 }
 
-int traitementDemandePartie(int sockJ1,int sockJ2,TPartieReq* reqJ1){
+/**
+ * Fonction de traitement des demandes de partie par les joueurs
+ * param 	int sockJ1  		Socket de connexion du joueur 1
+ * param 	int sockJ2   		Socket de connexion du joueur 2 
+ * param 	TPartieReq* reqJ1  	Requete de demande de partie envoyer par le joueur
+ * return 	int 				Retourne -1 si il y a une erreur, 0 sinon
+ */
+int traitementDemandePartie(int sockJ1,int sockJ2,TPartieReq* reqJ){
 	//Reception de la demande du j1 /
-    int err = recv(sockJ1,reqJ1,sizeof(TPartieReq), 0);
+	TPartieRep rep;
+    int err = recv(sockJ1,reqJ,sizeof(TPartieReq), 0);
     if (err < 0) {
         perror("serveurTCP: erreur dans la reception");
         // envoie erreur aux joueur
-        TPartieRep rep;
         rep.err = ERR_PARTIE;
         send(sockJ1, &rep, sizeof(TPartieRep), 0);
         send(sockJ2, &rep, sizeof(TPartieRep), 0);
@@ -62,13 +53,9 @@ int traitementDemandePartie(int sockJ1,int sockJ2,TPartieReq* reqJ1){
         return -1;
     }
 	
-	//printf("%s\n",reqJ1->nomJoueur);
-
-    if (reqJ1->idRequest != PARTIE) {
-                
+    if (reqJ->idRequest != PARTIE) {       
         perror("serveurTCP: erreur dans la reception");
         // envoie erreur aux joueur
-        TPartieRep rep;
         rep.err = ERR_TYP;
         send(sockJ1, &rep, sizeof(TPartieRep), 0);
         send(sockJ2, &rep, sizeof(TPartieRep), 0);
@@ -80,19 +67,27 @@ int traitementDemandePartie(int sockJ1,int sockJ2,TPartieReq* reqJ1){
 	return 0;
 }
 
+/**
+ * Fonction de reponse à la suite des demandes de partie faites par les joueurs
+ * param 	int sockJ1  		Socket de connexion du joueur 1
+ * param 	int sockJ2   		Socket de connexion du joueur 2 
+ * param 	int demande  		Joueur ayant envoyer la demande en premier 
+ * param 	TPartieReq* reqJ1  	Requete de demande de partie envoyer par le joueur 1
+ * param 	TPartieReq* reqJ1  	Requete de demande de partie envoyer par le joueur 2
+ * return 	void
+ */
 void envoiCouleur(int sockJ1,int sockJ2,int demande,TPartieReq* reqJ1, TPartieReq* reqJ2){
 	// Envoie des couleurs aux joueurs
-
-    if (demande == 1) {
-        TPartieRep repJ1;
-        repJ1.err = ERR_OK;
-        repJ1.coul = BLANC;
-		
-		memcpy(repJ1.nomAdvers,reqJ2->nomJoueur ,sizeof repJ1.nomAdvers);
+	TPartieRep repJ1;
+	TPartieRep repJ2;
 	
+    if (demande == 1) {
+        
+        repJ1.err = ERR_OK;
+        repJ1.coul = BLANC;	
+		memcpy(repJ1.nomAdvers,reqJ2->nomJoueur ,sizeof repJ1.nomAdvers);
         send(sockJ1, &repJ1, sizeof(TPartieRep), 0);
-
-        TPartieRep repJ2;
+        
         repJ2.err = ERR_OK;
         repJ2.coul = NOIR;
 		
@@ -100,34 +95,43 @@ void envoiCouleur(int sockJ1,int sockJ2,int demande,TPartieReq* reqJ1, TPartieRe
         send(sockJ2, &repJ2, sizeof(TPartieRep), 0);
     }
     if (demande == 2) {
-		TPartieRep repJ2;
         repJ2.err = ERR_OK;
-        repJ2.coul = BLANC;
-		
+        repJ2.coul = BLANC;		
 		memcpy(repJ2.nomAdvers,reqJ1->nomJoueur ,sizeof repJ2.nomAdvers);
-
         send(sockJ2, &repJ2, sizeof(TPartieRep), 0);
 		
-        TPartieRep repJ1;
         repJ1.err = ERR_OK;
         repJ1.coul = NOIR;
 
 		memcpy(repJ1.nomAdvers,reqJ2->nomJoueur ,sizeof repJ1.nomAdvers);
-
         send(sockJ1, &repJ1, sizeof(TPartieRep), 0);   
     }
 	
 }
 
+/**
+ * Fonction de traitement des coups envoyer par les joueurs
+ * Gestion du delai maximale de reponse (TIMEOUT)
+ * Envoie des reponses au joueurs, affiche le resultat des parties
+ * param 	int sockJ1  		Socket de connexion du joueur qui envoie le coup
+ * param 	int sockJ2   		Socket de connexion du joueur qui attent le coup 
+ * param 	int coul 			Couleur du joueur qui envoie le coup
+ * param 	bool timeout		Indique si le joueur qui envoie le coup a mis trop de temps a depasser le temps autorisé
+ * return 	bool 				Retourne vrai si la partie courrente est terminer
+ */
 bool traitementCoup(int sockJ1,int sockJ2,int coul,bool timeout){
 	//printf(" Activité SockJ1 \n");
 	//printf(" Partie %d\n",nbPartie+1);
 				
 	int err;
 	TCoupReq reqJ1;
+	TPropCoup propCoup;
+	TCoupRep rep;
+	bool fini = false;			
+	bool res;
 
 	err = recv(sockJ1,&reqJ1,sizeof(TCoupReq), 0);
-	//printf("\t Coup Joueur 1 reçu \n");
+	printf("Coup du Joueur %d reçu \n",coul);
 				
 	if (err < 0) {
 	  perror("serveurTCP: erreur dans la reception");
@@ -141,66 +145,76 @@ bool traitementCoup(int sockJ1,int sockJ2,int coul,bool timeout){
 	}
 				
 	// Traitement
-	TPropCoup propCoup;
-	TCoupRep rep;
+	
 	rep.err = ERR_OK;
-	bool fini = false;
-			
-	bool res;
-	printf("Joueuer : %d\n",coul);
-	res = validationCoup(coul,reqJ1,&propCoup);
+	
+	if(timeout){
+		// On fait perdre le joueur qui a fait un timeout
+		// pour réinitialiser validationCoup afin de jouer la partie suivante
+		// sans que la fonction attende la suite de la partie
+		reqJ1.action.posPion.lg = 4;
+		res = validationCoup(coul,reqJ1,&propCoup);
+		printf("TIMEOUT : Le joueur %d n'a pas répondue à temps : Il a perdu la partie\n",coul);
+		rep.validCoup = TIMEOUT; rep.propCoup = PERDU; fini = true;
+	}
+	else{
+		res = validationCoup(coul,reqJ1,&propCoup);
+		if (res) { 
+			rep.validCoup = VALID; 
+			printf("Coup du Joueur %d Validé \n",coul);
+			if(propCoup == GAGNE){
+				printf("Le Joueur %d à GAGNÉ \n",coul);
+			}
+			if(propCoup == NULLE){
+				printf("Il y a match nulle !\n");
+			}
+		}
+		if (!res) { 
+			rep.validCoup = TRICHE; 
+			printf("Coup du Joueur %d NON Validé \n",coul);
+			if(propCoup == PERDU){
+				printf("Le Joueur %d à GAGNÉ \n",coul);
+			}
+		}
+	}
 	if(propCoup != CONT){
 		fini = true;
 	}
 				
 
-	// Reponse
-	
-	// Test TIMEOUT , VALIDITER
-	if (res) { rep.validCoup = VALID; }
-	if (!res) { rep.validCoup = TRICHE; }
+	// Envoie des Reponses
 	rep.propCoup = propCoup;
-	if (timeout){ rep.validCoup = TIMEOUT; rep.propCoup = PERDU; fini = true;}
-	
-	
 	send(sockJ1, &rep, sizeof(TCoupRep), 0);
 	send(sockJ2, &rep, sizeof(TCoupRep), 0);
 	if(!fini || timeout){send(sockJ2, &reqJ1, sizeof(TCoupReq), 0);}  
+	printf("Réponse envoyer aux Joueurs\n");
 	
 	return fini;
 	
 }
 
 int main(int argc, char** argv) {
-    int  sockConx,        /* descripteur socket connexion */
-        sockTrans,       /* descripteur socket transmission */
-        sockJ1=0,
-        sockJ2=0,
+    int  sockConx,       /* descripteur socket connexion */
+        sockJ1=0,		 /* descripteur socket transmission du premier connecté*/
+        sockJ2=0,		 /* descripteur socket transmission du deuxieme connecté*/
         port,            /* numero de port */
         sizeAddr,        /* taille de l'adresse d'une socket */
-        err;            /* code d'erreur */
+        err;             /* code d'erreur */
+ 
+    char nomJ1[TNOM]; 	 /* Nom Joueur 1 */
+    char nomJ2[TNOM]; 	 /* Nom Joueur 2 */
 
-    char buffer[TAIL_BUF]; /* buffer de reception */
+    TPartieReq reqJ1; 	 /* Requete de demande du joueur 1 */
+    TPartieReq reqJ2; 	 /* Requete de demande du joueur 2 */
 
-
-    struct sockaddr_in nomTransmis;    /* adresse socket de transmission */
-    struct sockaddr_in nomConnecte;    /* adresse de la socket connectee */
-
+    int nfsd = 3;		 /* Nombre de descripteur déjà utilisé */
+	struct timeval tv = { TIME_MAX, 0 }; /* Parametre Timeout du select */
+	int nbPartie = 0;    /* Compteur du nombre de partie joué */
+	
+	int coulJ1 = 0;		 /* Couleur du joueur 1 */
+	int coulJ2 = 0;		 /* Couleur du joueur 2 */
     
-    
-    char nomJ1[TNOM];
-    char nomJ2[TNOM];
-
-    TPartieReq reqJ1;
-    TPartieReq reqJ2;
-
-    int scl[MAX_CL];
-    int nbsc = 0;
-    int nfsd = 3;
-
-    /*
-    * verification des arguments
-    */
+    // Vérification des arguments ( Numero de port )
     if (argc != 2) {
         printf("usage : serveurTCP no_port\n");
         return -1;
@@ -222,20 +236,19 @@ int main(int argc, char** argv) {
     FD_ZERO(&readSet);
     FD_SET(sockConx, &readSet);
     nfsd ++;
-	int cpt = 0;
-    int demande = 0;
-    int num = 0;
+	int cpt = 0; /* Compteur du nombre de joueur connecté */
+    int demande = 0; /* Joueur qui a demandé la partie en premier*/
+    int num = 0; /* Compteur du nombre de demande de partie reçu */
 	err = select(nfsd, &readSet, NULL, NULL, NULL);
 	if (err < 0) {
         perror("serveurTCP:  erreur sur select");
         return -5;
     }
 	printf("\n");
-	printf("\n");
 	printf("Attente des demande de connexions\n");
 	printf("\n");
 	
-    while (cpt < 2) { // Boucle de connecion
+    while (cpt < 2) { // Boucle de connexion
 
         if (FD_ISSET(sockConx, &readSet) && num<2) { // On accepte que deux accept
 		
@@ -244,13 +257,13 @@ int main(int argc, char** argv) {
 			if (num == 1) {
 				sockJ1 = traitementDemandeConnex(sockConx);
 				nfsd++;
-				printf("J1 Connecté %d\n",sockJ1);
+				printf("J1 Connecté numero de descripteur : %d\n",sockJ1);
 			}
 			
 			if (num == 2) {
 				sockJ2 = traitementDemandeConnex(sockConx);
 				nfsd++;
-				printf("J2 Connecté %d\n",sockJ2);
+				printf("J2 Connecté numero de descripteur : %d\n",sockJ2);
 			}
 			
         }
@@ -266,17 +279,13 @@ int main(int argc, char** argv) {
 		if (err < 0) {
 			perror("serveurTCP:  erreur sur select");
 			return -5;
-		}
-		//printf("%d\n",num);
-		
-		
+		}		
 		
 		// Reception des demande de partie
         if(FD_ISSET(sockJ1, &readSet)){
-            //Reception de la demande du j1 /
+            //Reception de la demande du J1 
             
 			traitementDemandePartie(sockJ1,sockJ2,&reqJ1);
-			
 			cpt++;
 			if(demande != 2){
 				demande = 1;
@@ -285,30 +294,25 @@ int main(int argc, char** argv) {
         }
 		
         if (FD_ISSET(sockJ2, &readSet)) {
-            // Reception de la demande du j2 /
+            // Reception de la demande du J2 
             
 			traitementDemandePartie(sockJ2,sockJ1,&reqJ2);
-			
 			cpt++;
 			if(demande != 1){
 				demande = 2;
 			}
 			printf("J2 partie demandee\n");
         }
-		
-		
+			
 	}
 
     // Envoie des couleurs aux joueurs
-
     envoiCouleur(sockJ1,sockJ2,demande,&reqJ1,&reqJ2);
-	int coulJ1 = -1;
-	int coulJ2 = -1;
+	
 	if(demande == 1){
 		coulJ1 = 1;
 		coulJ2 = 2;
 	}
-	
 	if(demande == 2){
 		printf("demande = %d",demande);
 		int tmp = sockJ1;
@@ -319,75 +323,53 @@ int main(int argc, char** argv) {
 	}
 
     // Debut de la partie
-
-	printf("\n");
 	printf("\n");
 	printf("Debut de la partie\n");
 	printf("\n");
     
-	struct timeval tv = { 6, 0 }; // Parametre Timeout du select
 	
-	
-	int nbPartie = 0;
 	while(nbPartie < 2){
-	
 		bool fini = false;
 		bool timeout = false;
 		int nbCoup = 0;
 		while (nbCoup < 40 && !fini) {
 
-			// Faire plus de fonction pour alleger le main().
-			// Init select avec timeout dans un timeval. // Init struct timeval tv entree/sortie  à 6s, dans le retour il nous dit si le temps est dépasser (Pas besoin de cst: TIME_MAX). 
-			// Si TIMEOUT -> recup quand meme les infos de connex mais on renvoi TIMEOUT ( il a perdu ).
-			tv.tv_sec = 6;
+			// Initialisation du select avec un timeout de 6 secondes. 
+			tv.tv_sec = TIME_MAX;
 			tv.tv_usec = 0;
 			
 			FD_SET(sockJ1, &readSet);
 			FD_SET(sockJ2, &readSet);
 			err = select(nfsd, &readSet, NULL, NULL, &tv);
 			if (err <= 0) {
-				printf("TIMEOUT\n");
+				// Vérification si il y a eu un timeout
 				timeout = true;
 			}
 			
 
 			if (FD_ISSET(sockJ1, &readSet) && !fini) {
-				// Reception de coup 
-				printf("\t Coup J%d\n",coulJ1);  
+				// Reception de coup pour le j1
+				printf("\t \t \t \tCoup J%d\n",coulJ1);  
 				fini = traitementCoup(sockJ1,sockJ2,coulJ1,timeout);
 				timeout = false;
 				nbCoup++;
 			}
 			if (FD_ISSET(sockJ2, &readSet) && !fini) {
 				// Reception de coup pour le j2 
-				printf("\t Coup J%d\n",coulJ2);
+				printf("\t \t \t \tCoup J%d\n",coulJ2);
 				fini = traitementCoup(sockJ2,sockJ1,coulJ2,timeout);
 				timeout = false;
 				nbCoup++;
 			}
 			
 		}
-		
-		
-		
-		
+			
 		nbPartie++;
 		if(nbPartie == 1){
 			printf("\n");
-			printf("\n");
-			printf("\n");
-			printf("\n");
-			
 			printf("Partie 1 FINI \n");
-			
-			printf("\n");
-			printf("\n");
-			printf("\n");
 			printf("\n");
 			printf("Debut partie 2 \n");
-			printf("\n");
-			printf("\n");
-			printf("\n");
 			printf("\n");
 			// Le deuxieme de la premiere partie commence en premier
 			// Echange des couleurs
