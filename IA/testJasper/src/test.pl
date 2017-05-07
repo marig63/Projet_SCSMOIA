@@ -1,6 +1,5 @@
-
- :-use_module(library(random)).
- :-use_module(library(lists)).
+:-use_module(library(random)).
+:-use_module(library(lists)).
 
 pred(text,42,X,Y,Z):-
         X is 64,
@@ -8,8 +7,13 @@ pred(text,42,X,Y,Z):-
         Z is 256.
 
 listeCoupPossible(Plateau,CouleurPion,NbPion,Res):-
-        %placementPion(Plateau,1,NbPion,CouleurPion,[],Res).
-        deplacementPion(Plateau,1,NbPion,CouleurPion,[],Res).
+        placementPion(Plateau,1,NbPion,CouleurPion,[],Res).
+listeCoupPossible(Plateau,CouleurPion,NbPion,Res):-       
+        deplacementPion(Plateau,NbPion,CouleurPion,[1,2,3,4,5,6,7,8,9],[],Res).
+
+placementPion([],_,_,_,Acc,[]):-
+        length(Acc,Taille),
+        Taille = 0.
 
 placementPion([],_,_,_,Acc,Res):-
         random_member(Res,Acc).
@@ -29,7 +33,11 @@ placementPion([Case|Plateau],NumCase,NbPion,_,Acc,Res):-
         placementPion(Plateau,NumCaseSuiv,NbPion,_,Acc,Res).
 
 % vérifie si le pion au dessus de la case et de la meme couleur que la notre 
-pionAppartient([CouleurPion|_],CouleurPion).
+pionMemeCouleur([Couleur|_],CouleurPion):-
+        Couleur = CouleurPion.
+pionAppartient(NumCase,Plateau,CouleurPion):-
+        nth1(NumCase,Plateau, Case),
+        pionMemeCouleur(Case,CouleurPion).
 
 nbColonne(3).
 nbLigne(3).
@@ -64,22 +72,41 @@ caseLibre(NumCaseArr,Plateau):-
         length(Case,NbPionCase),
         NbPionCase < 3.   
      
-deplacementPion([],_,_,_,Acc,Res):-
-        random_member(Res,Acc).
+deplacementPion(_,_,_,_,Acc,Acc):-
+        length(Acc,Taille),
+        Taille > 0,!.
+        %random_member(Res,Acc).
 
-deplacementPion([Case|Plateau],NumCase,NbPion,CouleurPion,Acc,Res):-
+deplacementPion(_,_,_,[],_,[]):-!.
+
+deplacementPion(Plateau,NbPion,CouleurPion,ListeCase,_,Res):-
         NbPion >= 8,
-        pionAppartient(Case,CouleurPion),
-        deplace(NumCase,Plateau,Acc1),
-        NumCaseSuiv is NumCase +1,
-        deplacementPion(Plateau,NumCaseSuiv,NbPion,CouleurPion,[Acc1|Acc],Res).
+        random_select(NumCase,ListeCase,ListeCase2),
+        %pionAppartient(NumCase,Plateau,CouleurPion),
+        !,
+        profondeur([],NumCase,Plateau,CouleurPion,Acc),
+        deplacementPion(Plateau,NbPion,CouleurPion,ListeCase2,Acc,Res).
 
-deplace(NumCaseDep,Plateau,Acc1):-
+deplacementPion(Plateau,NbPion,CouleurPion,ListeCase,Acc,Res):-
+        NbPion >=8,
+        deplacementPion(Plateau,NbPion,CouleurPion,ListeCase,Acc,Res).
+   
+deplace(NumCaseDep,Plateau,_,[NumCaseDep,NumCaseArr]):-
         deplacementPossible(NumCaseDep,NumCaseArr),
-        caseValide(NumCaseArr),
         caseLibre(NumCaseArr,Plateau),
-        append([NumCaseDep,NumCaseArr],Acc1,Acc1).
-        %ResCoup = [[NumCaseDep,NumCaseArr]|ResCoup].
+        caseValide(NumCaseDep).
+        %\+member([NumCaseDep,NumCaseArr],Acc).
+        %deplace(NumCaseDep,Plateau,[[NumCaseDep,NumCaseArr]|Acc],Res).
 
-        
+profondeur(L,NumCaseDep,Plateau,CouleurPion,L):-
+               \+pionAppartient(NumCaseDep,Plateau,CouleurPion),!.       
 
+profondeur(L,NumCaseDep,Plateau,CouleurPion,Sol):-
+                pionAppartient(NumCaseDep,Plateau,CouleurPion),
+                 deplace(NumCaseDep,Plateau,_,Res),
+                 \+member(Res,L),!,
+                 append([Res],L,LL),
+                 profondeur(LL,NumCaseDep,Plateau,CouleurPion,Sol). 
+
+profondeur(L,_,_,_,L):-!.
+       
