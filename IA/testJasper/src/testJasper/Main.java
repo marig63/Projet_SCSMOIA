@@ -4,62 +4,70 @@ import se.sics.jasper.*;
 
 public class Main {
 	
-
-	
-    public static void main(String argv[]) {
-
-        SICStus sp;
+	public static Coup appelIA(Plateau p,char coulP,int nbCoup){
+		Coup coup = null;
+		SICStus sp;
         SPQuery query;
+       
         try{
         	//-Djava.library.path="C:/Program Files/SICStus Prolog VC14 4.3.5/bin;%PATH%"
         	//listeCoupPossible([[],[N,N,N],[],[N,N],[],[N,N],[],[],[N,N,N]],_,0,Res).
         	//listeCoupPossible(Plateau,CouleurPion,NbPion,Res):-
-        	sp = new SICStus(argv,null);
+        	sp = new SICStus(null,null);
 
             sp.load("C:/Users/guillaume/workspace/testJasper/src/testJasper/test.pl");
 
             SPPredicate pred = new SPPredicate(sp, "listeCoupPossible", 4, "");
-            //SPTerm plateau = new SPTerm(sp, "[[],[N,N,N],[],[N,N],[],[N,N],[],[],[N,N,N]]");
             
-            SPTerm N = new SPTerm(sp,"Noir");
-            SPTerm B = new SPTerm(sp,"Blanc");
-            
-            Plateau p = new Plateau();
-            p.add(1, 'B');p.add(1, 'B');p.add(1, 'N');
-            p.add(2, 'N');
-            p.add(3, 'N');
-            p.add(4, 'N');
-            p.add(5, 'B');
-            p.add(6, 'N');
-            p.add(7, 'B');p.add(7, 'N');
-            p.add(8, 'B');
-            p.add(9, 'N'); p.add(9, 'B');p.add(9, 'B');
-            p.remove(1);
-            //p.remove(2); //p.remove(2);
-            p.remove(9);
-            
+            SPTerm N = new SPTerm(sp,"N");
+            SPTerm B = new SPTerm(sp,"B");
             
             SPTerm plateau = p.toTerme(sp);
             
-            System.out.println(p.toString());
-            System.out.println(plateau.toString());
+            //System.out.println(p.toString());
+            //System.out.println(plateau.toString());
             
-           
-            
-            SPTerm couleurPion = new SPTerm(sp, "N");
             SPTerm nbPion = new SPTerm(sp, 0);
             SPTerm res = new SPTerm(sp).putVariable();
 
-            query = sp.openQuery(pred, new SPTerm[] { plateau, couleurPion, nbPion, res});
+            query = sp.openQuery(pred, new SPTerm[] { plateau, N, nbPion, res});
 
+            SPTerm t[] = new SPTerm[2];
+            String s1 = "" ;
+            String s2 = "";
             while (query.nextSolution())
             {
-                System.out.println(res.toString());
-            }
+                t = res.toTermArray();
+                s1 = t[0].toString();
+                s2 = t[1].toString();
+            }  
+            coup = new Coup(	Integer.parseInt(s1)	,	Integer.parseInt(s2)	);    
         }
         catch ( Exception e )
         {
             e.printStackTrace();
         }
+		return coup;	
+	}
+	
+    public static void main(String argv[]) {
+
+    	Plateau p = new Plateau();
+        p.add(1, 'B');p.add(1, 'B');p.add(1, 'N');
+        p.add(2, 'N');
+        p.add(3, 'N');
+        p.add(4, 'N');
+        p.add(5, 'B');
+        p.add(6, 'N');
+        p.add(7, 'B');p.add(7, 'N');
+        p.add(8, 'B');
+        p.add(9, 'N'); p.add(9, 'B');p.add(9, 'B');
+        p.remove(1);
+        //p.remove(2); //p.remove(2);
+        p.remove(9);
+    	
+        Coup coup = appelIA(p,'N',0);
+        System.out.println(coup.toString());
+        
     }
 }
