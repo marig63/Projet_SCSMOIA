@@ -1,5 +1,4 @@
 package testJasper;
-
 import se.sics.jasper.*;
 
 public class Main {
@@ -15,7 +14,8 @@ public class Main {
         	//listeCoupPossible(Plateau,CouleurPion,NbPion,Res):-
         	sp = new SICStus(null,null);
 
-            sp.load("C:/Users/guillaume/workspace/testJasper/src/testJasper/test.pl");
+            //sp.load("C:/Users/guillaume/workspace/testJasper/src/testJasper/test.pl");
+        	sp.load("/afs/deptinfo-st.univ-fcomte.fr/users/gmarisa/workspace/preojet/bin/preojet/test.pl");
 
             SPPredicate pred = new SPPredicate(sp, "listeCoupPossible", 4, "");
             
@@ -27,9 +27,15 @@ public class Main {
             //System.out.println(p.toString());
             //System.out.println(plateau.toString());
             
-            SPTerm nbPion = new SPTerm(sp, 0);
+            SPTerm nbPion = new SPTerm(sp, nbCoup);
             SPTerm res = new SPTerm(sp).putVariable();
 
+            if(coulP == 'N'){
+            	query = sp.openQuery(pred, new SPTerm[] { plateau, N, nbPion, res});
+			}
+			if(coulP == 'B'){
+				query = sp.openQuery(pred, new SPTerm[] { plateau, B, nbPion, res});
+			}
             query = sp.openQuery(pred, new SPTerm[] { plateau, N, nbPion, res});
 
             SPTerm t[] = new SPTerm[2];
@@ -37,9 +43,14 @@ public class Main {
             String s2 = "";
             while (query.nextSolution())
             {
+            	try{
+            	System.out.println(res.toString());
                 t = res.toTermArray();
                 s1 = t[0].toString();
                 s2 = t[1].toString();
+            	}
+            	catch(Exception e){
+            		System.out.print(e);            	}
             }  
             coup = new Coup(	Integer.parseInt(s1)	,	Integer.parseInt(s2)	);    
         }
@@ -65,8 +76,9 @@ public class Main {
         p.remove(1);
         //p.remove(2); //p.remove(2);
         p.remove(9);
+
     	
-        Coup coup = appelIA(p,'N',0);
+        Coup coup = appelIA(p,'N',8);
         System.out.println(coup.toString());
         
     }
