@@ -1,4 +1,4 @@
-package testJasper;
+package preojet;
 import se.sics.jasper.*;
 
 public class Main {
@@ -6,7 +6,7 @@ public class Main {
 	public static Coup appelIA(Plateau p,char coulP,int nbCoup){
 		Coup coup = null;
 		SICStus sp;
-        SPQuery query;
+        SPQuery query = null;
        
         try{
         	//-Djava.library.path="C:/Program Files/SICStus Prolog VC14 4.3.5/bin;%PATH%"
@@ -36,7 +36,7 @@ public class Main {
 			if(coulP == 'B'){
 				query = sp.openQuery(pred, new SPTerm[] { plateau, B, nbPion, res});
 			}
-            query = sp.openQuery(pred, new SPTerm[] { plateau, N, nbPion, res});
+            //query = sp.openQuery(pred, new SPTerm[] { plateau, N, nbPion, res});
 
             SPTerm t[] = new SPTerm[2];
             String s1 = "" ;
@@ -78,7 +78,7 @@ public class Main {
         p.remove(9);
 
     	
-        Coup coup = appelIA(p,'N',8);
+        Coup coup = appelIA(p,'B',8);
         System.out.println(coup.toString());
         
     }
