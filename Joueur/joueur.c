@@ -31,13 +31,91 @@ void gestionTCase(TCase cases,int* ligne,char* col){
 	}
 }
 
+void creationTCase(TCase* cases,int numCase){
+	int colCase = (numCase + 3)%3;
+	int ligneCase = (numCase - 1)/3;
+	switch(colCase){
+		case 0:
+			cases->col = C;
+			break;
+		case 1:
+				cases->col = A;
+				break;
+		case 2:
+				cases->col = B;
+				break;
+	}
+
+	switch(ligneCase){
+		case 0:
+			cases->lg = UN;
+			break;
+		case 1:
+				cases->lg = DEUX;
+				break;
+		case 2:
+				cases->lg = TROIS;
+				break;
+	}
+}
+
+int creationNumCase(TCase cases){
+	int res;
+	switch(cases.col){
+		case A:
+			switch(cases.lg){
+				case UN:
+					res = 1;
+					break;
+
+				case DEUX:
+					res = 4;	
+					break;
+				case TROIS:
+					res = 7;	
+					break;
+			}
+			break;
+		case B:
+				switch(cases.lg){
+				case UN:
+					res = 2;
+					break;
+
+				case DEUX:
+					res = 5;	
+					break;
+				case TROIS:
+					res = 8;	
+					break;
+			}
+				break;
+		case C:
+				switch(cases.lg){
+				case UN:
+					res = 3;
+					break;
+
+				case DEUX:
+					res = 6;	
+					break;
+				case TROIS:
+					res = 9;	
+					break;
+			}
+	}
+	return res;
+}
 //gere les coup de l'adverse 
-void gestionCoupAdverse(TCoupReq repCoup){
+void gestionCoupAdverse(TCoupReq repCoup,int sockJava){
 	int ligne;
 	char col;
+	int caseDep,caseArr,err;
 	if(repCoup.typeCoup == POS_PION ){
 		gestionTCase(repCoup.action.posPion,&ligne,&col);
 		printf("Coup de l'adversaire: Positionnement en %d%c\n",ligne,col);
+		caseDep = creationNumCase(repCoup.action.posPion);
+		caseArr = caseDep;
 	}else{
 		if(repCoup.typeCoup == DEPL_PION){
 			gestionTCase(repCoup.action.deplPion.caseDep,&ligne,&col);
@@ -45,34 +123,76 @@ void gestionCoupAdverse(TCoupReq repCoup){
 			printf("De %d%c",ligne,col);
 			gestionTCase(repCoup.action.deplPion.caseArr,&ligne,&col);
 			printf("Vers %d%c\n",ligne,col);
+			caseDep = creationNumCase(repCoup.action.deplPion.caseDep);
+			caseArr = creationNumCase(repCoup.action.deplPion.caseArr);			
+		}else{
+			printf("L'adversaire a passer son tour");
+			caseDep = 0;
+			caseArr = 0;
 		}
 	}
+	int caseEnvoie = caseArr*10 + caseDep;
+	err = send(sockJava, &caseEnvoie, sizeof(int), 0);
+	if(err<0){
+	  printf("erreur envoie coup adverse vers java (case de depart)");
+	  exit(3);
+  }
+	printf("caseDep: %d, caseArr: %d err: %d\n",caseDep,caseArr,err);
+
+	/*err = send(sockJava, &caseArr, sizeof(int), 0);
+	 if(err<0){
+	  printf("erreur envoie coup adverse vers java (case de arrivée)");
+	  exit(3);
+  }*/
 }
 
-void creationCoup(TCoupReq* coup,int couleur){
+void creationCoup(TCoupReq* coup,int couleur,int sockJava){
 	
-	//demande coup a l'ia
+	int caseDep=0,caseArr=0,err;
+
+	//reception des 2 cases
+	err = recv(sockJava,&caseDep,sizeof(int),0);
+	if(err<0){
+	  printf("erreur reception case de depart de l'ia err: %d\n",errno);
+	  exit(3);
+  }
+
+	caseArr = caseDep/10;
+	caseDep = caseDep%10;	
+	printf("Choix du coup %d-%d\n",caseDep,caseArr);
 
 	coup->idRequest = COUP;
+	//definition de la couleur
 	if(couleur == 1){
 		coup->coul = BLANC;
 	}else{
 		coup->coul = NOIR;
 	}
 
-	//choix entre positionnement et deplacement suivant l'ia
-	coup->typeCoup = POS_PION;
-	
-	TCase cases;
-	if(couleur == 1){
-		cases.lg = UN;
+	TCase cases1,cases2;
+	TDeplPion depl;
+	if(caseDep == caseArr){
+		coup->typeCoup = POS_PION;
+		creationTCase(&cases1,caseDep);
+		coup->action.posPion = cases1;
 	}else{
-		cases.lg = DEUX;
+		if(caseDep == 0 && caseArr == 0){
+			coup->typeCoup = PASSE;
+			creationTCase(&cases1,caseDep);
+			coup->action.posPion = cases1;
+		}else{
+			//choix entre positionnement et deplacement suivant l'ia
+			coup->typeCoup = DEPL_PION;
+			creationTCase(&cases1,caseDep);
+			creationTCase(&cases2,caseArr);
+			depl.caseDep = cases1;
+			depl.caseArr = cases2;
+		
+			coup->action.deplPion = depl;
+		}	
 	}
-	cases.col = A;
-
-	coup->action.posPion = cases;
 }
+
 
 int main(int argc, char **argv) {
 
@@ -88,10 +208,12 @@ int main(int argc, char **argv) {
 	TCoupReq coupAdverse;
 	TCoupRep repCoup;
 	int continu =0;
-	
+	int portJava;
+	int sockJava;
+	int tmp = 1;
 	/* verification des arguments */
-  if (argc != 4) {
-    printf("usage : client nom_machine no_port nomJoueur\n");
+  if (argc != 5) {
+    printf("usage : client nom_machine no_port nomJoueur no_port_Java\n");
     exit(1);
   }
 
@@ -102,8 +224,19 @@ int main(int argc, char **argv) {
 
 	if (nbCarac > TNOM-1) {
     printf("nom du joueur trop long\n");
+		shutdown(sockJava, 2); close(sockJava);
     exit(2);
   }
+
+	//création socket java
+	portJava = atoi(argv[4]);
+	printf("num port java %d\n",portJava);
+	err = socketClient("localhost" , portJava);
+  if(err<0){
+	  printf("erreur connexion socket Java\n");
+	  exit(3);
+  }
+	sockJava = err;
 
   nomMachine = argv[1];
   port = atoi(argv[2]);
@@ -111,10 +244,10 @@ int main(int argc, char **argv) {
   err = socketClient(nomMachine , port);
   
   if(err<0){
-	  // Erreur
+	  printf("erreur connexion socket c\n");
+		shutdown(sockJava, 2); close(sockJava);
 	  exit(3);
   }
-
   sock = err;
 
 	//Création de la requete partie
@@ -134,6 +267,8 @@ int main(int argc, char **argv) {
 
 	if(err <= 0){
 		printf("Erreur send demande de partie\n");
+		shutdown(sockJava, 2); close(sockJava);
+		shutdown(sock, 2); close(sock);
 		exit(4);
 	}
 
@@ -153,20 +288,33 @@ int main(int argc, char **argv) {
 			}
 	}
 	else{
-		printf("Erreur \n");
+		printf("Erreur reception validation de la partie\n");
+		shutdown(sockJava, 2); close(sockJava);
+		shutdown(sock, 2); close(sock);
+		exit(4);
 	}	
+
+	//envoie de la couleur de pion au java
+	err = send(sockJava, &couleurPion, sizeof(int), 0);
+	if(err <= 0){
+		printf("Erreur send couleur vers java\n");
+		shutdown(sockJava, 2); close(sockJava);
+		shutdown(sock, 2); close(sock);
+		exit(4);
+	}
 
 	//envoie coup
 	//demande coup a l'IA
 
-	while(nbPartie < 2){
-
+	//Si on joue en premier on recoie le premier coup de l'adversaire avant de rentre dans la boucle de jeu
 	if((couleurPion == 2 && nbPartie == 0) || (couleurPion == 1 && nbPartie == 1)){
 
 		//reception de la validation du coup adverse
 		err = recv(sock,&repCoup,sizeof(TCoupRep),0);
 		if(err <= 0){
 			printf("Erreur reception validation du coup adverse 1\n");
+			//shutdown(sockJava, 2); close(sockJava);
+			shutdown(sock, 2); close(sock);
 			exit(5);
 		}
 
@@ -176,22 +324,28 @@ int main(int argc, char **argv) {
 
 			if(err <= 0){
 				printf("Erreur lors de la reception du coup adverse\n");
+  		  //shutdown(sockJava, 2); close(sockJava);
+  	  	shutdown(sock, 2); close(sock);
 				exit(6);
 			}
-			gestionCoupAdverse(coupAdverse);
+			gestionCoupAdverse(coupAdverse,sockJava);
 			continu = 1;
 		}
 	}
 
+
 	if(continu == 1 || couleurPion == 1 || nbPartie == 1){
-	printf("voila\n");
+
 	do{
 
 		//envoie du prochain coup
-		creationCoup(&coup,couleurPion);
+		
+		creationCoup(&coup,couleurPion,sockJava);
 		err = send(sock, &coup, sizeof(TCoupReq), 0);
 		if(err <= 0){
 			printf("Erreur send d'envoie du coup\n");
+	  	//shutdown(sockJava, 2); close(sockJava);
+	  	shutdown(sock, 2); close(sock);
 			exit(7);
 		}
 
@@ -199,6 +353,8 @@ int main(int argc, char **argv) {
 	err = recv(sock,&repCoup,sizeof(TCoupRep),0);
 		if(err <= 0){
 			printf("Erreur reception validation de mon coup \n");
+			//shutdown(sockJava, 2); close(sockJava);
+      shutdown(sock, 2); close(sock);
 			exit(8);
 		}
 
@@ -213,6 +369,8 @@ int main(int argc, char **argv) {
 		err = recv(sock,&repCoup,sizeof(TCoupRep),0);
 		if(err <= 0){
 			printf("Erreur reception validation du coup adverse 2\n");
+			//shutdown(sockJava, 2); close(sockJava);
+			shutdown(sock, 2); close(sock);
 			exit(9);
 		}
 
@@ -222,16 +380,96 @@ int main(int argc, char **argv) {
 
 			if(err <= 0){
 				printf("Erreur lors de la reception du coup adverse\n");
+				//shutdown(sockJava, 2); close(sockJava);
+				shutdown(sock, 2); close(sock);
 				exit(10);
 			}
-			gestionCoupAdverse(coupAdverse);
+			gestionCoupAdverse(coupAdverse,sockJava);
 			continu = 1;
 		}
 	}
+		int bidon = 55;
+		if(repCoup.propCoup == CONT){
+			tmp = 1;
+			err = send(sockJava, &tmp, sizeof(int), 0);
+		}else{
+			tmp = 0;
 
+			err = send(sockJava, &bidon, sizeof(int), 0);
+			err = send(sockJava, &tmp, sizeof(int), 0);	
+		}
+
+		if(err <= 0){
+				printf("Erreur send de continu partie vers java 2\n");
+				//shutdown(sockJava, 2); close(sockJava);
+				shutdown(sock, 2); close(sock);
+				exit(7);
+			}
 	}while(repCoup.propCoup == CONT);
 	nbPartie++;
-	}
+	printf("Fin de partie 1\n");
+
+		
+		if((couleurPion == 2 && nbPartie == 0) || (couleurPion == 1 && nbPartie == 1)){
+
+			err = recv(sock,&repCoup,sizeof(TCoupRep),0);
+			
+
+			if(repCoup.err == ERR_OK && repCoup.propCoup == CONT){
+				err = recv(sock,&coupAdverse,sizeof(TCoupReq),0);
+
+				if(err <= 0){
+					printf("Erreur lors de la reception du coup adverse\n");
+	  	  			shutdown(sock, 2); close(sock);
+					exit(6);
+				}
+				gestionCoupAdverse(coupAdverse,sockJava);
+				continu = 1;
+			}
+		}
+
+		do{
+
+				//envoie du prochain coup
+		
+			creationCoup(&coup,couleurPion,sockJava);
+			err = send(sock, &coup, sizeof(TCoupReq), 0);
+			
+
+			err = recv(sock,&repCoup,sizeof(TCoupRep),0);
+				
+
+			if(repCoup.err != ERR_OK && repCoup.validCoup != VALID){
+				printf("Erreur coup invalide\n");
+				break;
+			}
+
+			if(repCoup.propCoup == CONT){
+
+				err = recv(sock,&repCoup,sizeof(TCoupRep),0);
+
+				if(repCoup.err == ERR_OK && repCoup.propCoup == CONT){
+	
+					err = recv(sock,&coupAdverse,sizeof(TCoupReq),0);
+
+					gestionCoupAdverse(coupAdverse,sockJava);
+					continu = 1;
+				}
+			}
+
+			int bidon = 55;
+			if(repCoup.propCoup == CONT){
+				tmp = 1;
+				err = send(sockJava, &tmp, sizeof(int), 0);
+			}else{
+				tmp = 0;
+
+				err = send(sockJava, &bidon, sizeof(int), 0);
+				err = send(sockJava, &tmp, sizeof(int), 0);	
+			}
+
+		}while(repCoup.propCoup == CONT);
+	
 
 	//affichage du resultat de la partie
 	switch(repCoup.propCoup){
@@ -247,7 +485,8 @@ int main(int argc, char **argv) {
 			printf("Match nulle\n");
 		break;
 	}
-
+	//shutdown(sockJava, 2); close(sockJava);
+  shutdown(sock, 2); close(sock);
 	/*-----------------*/
 	}
 
