@@ -170,7 +170,7 @@ public class Main {
 			    		}
 			    		else{
 			    			p.remove(caseDepAdv);
-			    			p.add(caseArrCoup, coulA);
+			    			p.add(caseArrAdv, coulA);
 			    		}
 		    		}
 		    		System.out.println(p.toString());
@@ -226,7 +226,7 @@ public class Main {
 			    		}
 			    		else{
 			    			p.remove(caseDepAdv);
-			    			p.add(caseArrCoup, coulA);
+			    			p.add(caseArrAdv, coulA);
 			    		}
 		    		}
 		    		System.out.println(p.toString());
